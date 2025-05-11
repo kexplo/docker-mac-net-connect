@@ -1,5 +1,13 @@
 # Docker Mac Net Connect
 
+> [!NOTE]
+> This is a fork of the docker-mac-net-connect repo. Used as a personal workaround until official support is added upstream.
+> Tested on macOS 15.3 (Sequoia) and Colima 0.8.1.
+> 
+> Related issue: https://github.com/chipmk/docker-mac-net-connect/issues/26
+
+original README.md:
+
 > Connect directly to Docker-for-Mac containers via IP address.
 
 ## Features
