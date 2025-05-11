@@ -203,4 +203,18 @@ func main() {
 		fmt.Printf("Failed to insert iptables filter rule: %v\n", err)
 		os.Exit(ExitSetupFailed)
 	}
+
+	fmt.Println("Adding iptables FORWARD rule for host WireGuard IP")
+
+	// Add iptables FORWARD rule to allow incoming traffic from the hostPeerIp
+	// This is needed by Lima-based Docker VM hosts
+	err = ipt.AppendUnique(
+		"filter", "FORWARD",
+		"-s", hostPeerIp,
+		"-j", "ACCEPT",
+	)
+	if err != nil {
+		fmt.Printf("Failed to add iptables filter rule: %v\n", err)
+		os.Exit(ExitSetupFailed)
+	}
 }
