@@ -6,6 +6,28 @@
 > 
 > Related issue: https://github.com/chipmk/docker-mac-net-connect/issues/26
 
+Installation:
+
+```bash
+# install via Homebrew
+brew install kexplo/tap/docker-mac-net-connect
+
+# Run the service and register it to launch at boot
+sudo brew services start kexplo/tap/docker-mac-net-connect
+```
+
+Uninstall:
+
+```bash
+# Stop the service
+sudo brew services stop kexplo/tap/docker-mac-net-connect
+
+# Uninstall
+brew uninstall docker-mac-net-connect
+```
+
+---
+
 original README.md:
 
 > Connect directly to Docker-for-Mac containers via IP address.
