@@ -9,7 +9,9 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -39,6 +41,47 @@ const (
 	ENV_WG_UAPI_FD            = "WG_UAPI_FD"
 	ENV_WG_PROCESS_FOREGROUND = "WG_PROCESS_FOREGROUND"
 )
+
+// newDockerClient initializes a Docker client by checking DOCKER_HOST, default socket locations, and Colima socket.
+func newDockerClient(logger *device.Logger) (*client.Client, error) {
+	dockerHostEnv := os.Getenv("DOCKER_HOST")
+	if dockerHostEnv != "" {
+		logger.Verbosef("Attempting to use Docker host from DOCKER_HOST environment variable: %s", dockerHostEnv)
+		return client.NewClientWithOpts(client.FromEnv)
+	}
+
+	logger.Verbosef("DOCKER_HOST environment variable not set. Checking default socket locations.")
+
+	// Check default Docker socket
+	defaultDockerHostURL := client.DefaultDockerHost
+	if strings.HasPrefix(defaultDockerHostURL, "unix://") {
+		defaultDockerSockPath := strings.TrimPrefix(defaultDockerHostURL, "unix://")
+		if _, err := os.Stat(defaultDockerSockPath); err == nil {
+			logger.Verbosef("Found default Docker socket at %s. Attempting to connect via %s.", defaultDockerSockPath, defaultDockerHostURL)
+			return client.NewClientWithOpts(client.WithHost(defaultDockerHostURL), client.WithAPIVersionNegotiation())
+		}
+		logger.Verbosef("Default Docker socket %s not found at path %s.", defaultDockerHostURL, defaultDockerSockPath)
+	} else {
+		logger.Verbosef("Default Docker host %s is not a Unix socket. Skipping file existence check for this path.", defaultDockerHostURL)
+	}
+
+	// Check Colima Docker socket
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		logger.Errorf("Failed to get user home directory: %v. Skipping Colima socket check.", err)
+	} else {
+		colimaSockPath := filepath.Join(homeDir, ".colima", "default", "docker.sock")
+		if _, err := os.Stat(colimaSockPath); err == nil {
+			colimaHostURL := "unix://" + colimaSockPath
+			logger.Verbosef("Found Colima Docker socket at %s. Attempting to connect.", colimaSockPath)
+			return client.NewClientWithOpts(client.WithHost(colimaHostURL), client.WithAPIVersionNegotiation())
+		}
+		logger.Verbosef("Colima Docker socket not found at %s.", colimaSockPath)
+	}
+
+	logger.Verbosef("No specific Docker socket found through explicit checks. Falling back to default client behavior (client.FromEnv).")
+	return client.NewClientWithOpts(client.FromEnv)
+}
 
 func main() {
 	logLevel := func() int {
@@ -171,7 +214,7 @@ func main() {
 
 	logger.Verbosef("Interface %s created\n", interfaceName)
 
-	cli, err := client.NewClientWithOpts(client.FromEnv)
+	cli, err := newDockerClient(logger)
 	if err != nil {
 		logger.Errorf("Failed to create Docker client: %v", err)
 		os.Exit(ExitSetupFailed)
